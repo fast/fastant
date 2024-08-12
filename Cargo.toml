@@ -1,6 +1,6 @@
 [package]
 name = "fastant"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["FastLabs Developers"]
 edition = "2021"
 license = "MIT"

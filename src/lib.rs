@@ -29,6 +29,8 @@
 //!
 //! **[See also the `Instant` type](Instant).**
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 mod instant;
 #[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
 mod tsc_now;
