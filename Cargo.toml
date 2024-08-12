@@ -1,21 +1,22 @@
 [package]
-name = "minstant"
-version = "0.1.7"
-authors = ["The TiKV Authors"]
+name = "fastant"
+version = "0.1.0"
+authors = ["FastLabs Developers"]
 edition = "2021"
 license = "MIT"
-description = "A drop-in replacement for `std::time::Instant` that measures time with high performance and high accuracy powered by TSC"
-homepage = "https://github.com/tikv/minstant"
-repository = "https://github.com/tikv/minstant"
-documentation = "https://docs.rs/minstant"
+description = "A drop-in replacement for `std::time::Instant` that measures time with high performance and high accuracy powered by Time Stamp Counter (TSC)."
+homepage = "https://github.com/fast/fastant"
+repository = "https://github.com/fast/fastant"
+documentation = "https://docs.rs/fastant"
 readme = "README.md"
 keywords = ["TSC", "clock", "rdtsc", "timing", "nanosecond"]
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
-ctor = "0.1.20"
+ctor = "0.2"
 coarsetime = { version = "0.1", optional = true }
 web-time = "1.0"
 
@@ -24,8 +25,11 @@ atomic = []
 fallback-coarse = ["coarsetime"]
 
 [dev-dependencies]
-criterion = "0.3"
-quanta = "0.9"
+criterion = { version = "0.5", default-features = false, features = [
+  "plotters",
+  "cargo_bench_support",
+] }
+quanta = "0.12"
 rand = "0.8"
 wasm-bindgen-test = "0.3"
 getrandom = { version = "0.2", features = ["js"] }

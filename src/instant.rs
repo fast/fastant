@@ -1,12 +1,15 @@
 // Copyright 2021 TiKV Project Authors. Licensed under Apache-2.0.
 
-use std::{
-    ops::{Add, AddAssign, Sub, SubAssign},
-    time::Duration,
-};
-use web_time::{SystemTime, UNIX_EPOCH};
+use std::ops::Add;
+use std::ops::AddAssign;
+use std::ops::Sub;
+use std::ops::SubAssign;
+use std::time::Duration;
 
-/// A measurement of a monotonically nondecreasing clock. Similar to
+use web_time::SystemTime;
+use web_time::UNIX_EPOCH;
+
+/// A measurement of a monotonically non-decreasing clock. Similar to
 /// [`std::time::Instant`](std::time::Instant) but is faster and more
 /// accurate if TSC is available.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -22,9 +25,8 @@ impl Instant {
     ///
     /// # Examples
     ///
-    /// ```
-    /// use minstant::Instant;
-    ///
+    /// ```rust
+    /// use fastant::Instant;
     /// let now = Instant::now();
     /// ```
     pub fn now() -> Instant {
@@ -36,20 +38,21 @@ impl Instant {
     ///
     /// # Panics
     ///
-    /// Previously we panicked if `earlier` was later than `self`. Currently this method saturates
+    /// Previously we panicked if `earlier` was later than `self`. Currently, this method saturates
     /// to follow the behavior of the standard library. Future versions may reintroduce the panic
     /// in some circumstances.
     ///
     /// # Examples
     ///
     /// ```
-    /// use std::time::Duration;
     /// use std::thread::sleep;
+    /// use std::time::Duration;
     ///
-    /// use minstant::Instant;
+    /// use fastant::Instant;
     ///
     /// let now = Instant::now();
     /// sleep(Duration::new(1, 0));
+    ///
     /// let new_now = Instant::now();
     /// println!("{:?}", new_now.duration_since(now));
     /// println!("{:?}", now.duration_since(new_now)); // 0ns
@@ -64,13 +67,14 @@ impl Instant {
     /// # Examples
     ///
     /// ```
-    /// use std::time::Duration;
     /// use std::thread::sleep;
+    /// use std::time::Duration;
     ///
-    /// use minstant::Instant;
+    /// use fastant::Instant;
     ///
     /// let now = Instant::now();
     /// sleep(Duration::new(1, 0));
+    ///
     /// let new_now = Instant::now();
     /// println!("{:?}", new_now.checked_duration_since(now));
     /// println!("{:?}", now.checked_duration_since(new_now)); // None
@@ -87,13 +91,14 @@ impl Instant {
     /// # Examples
     ///
     /// ```
-    /// use std::time::Duration;
     /// use std::thread::sleep;
+    /// use std::time::Duration;
     ///
-    /// use minstant::Instant;
+    /// use fastant::Instant;
     ///
     /// let now = Instant::now();
     /// sleep(Duration::new(1, 0));
+    ///
     /// let new_now = Instant::now();
     /// println!("{:?}", new_now.saturating_duration_since(now));
     /// println!("{:?}", now.saturating_duration_since(new_now)); // 0ns
@@ -113,10 +118,10 @@ impl Instant {
     /// # Examples
     ///
     /// ```
-    /// use std::time::Duration;
     /// use std::thread::sleep;
+    /// use std::time::Duration;
     ///
-    /// use minstant::Instant;
+    /// use fastant::Instant;
     ///
     /// let instant = Instant::now();
     /// let three_secs = Duration::from_secs(3);
@@ -146,18 +151,20 @@ impl Instant {
             .map(Instant)
     }
 
-    /// Convert interal clocking counter into a UNIX timestamp represented as the
-    /// nanoseconds elapsed from [UNIX_EPOCH](std::time::UNIX_EPOCH).
+    /// Convert internal clocking counter into a UNIX timestamp represented as the
+    /// nanoseconds elapsed from [UNIX_EPOCH](UNIX_EPOCH).
     ///
-    /// [`Anchor`](crate::Anchor) contains the necessary calibration data for conversion.
-    /// Typically, initializing an [`Anchor`](crate::Anchor) takes about 50 nano seconds, so
+    /// [`Anchor`](Anchor) contains the necessary calibration data for conversion.
+    /// Typically, initializing an [`Anchor`](Anchor) takes about 50 nanoseconds, so
     /// try to reuse it for a batch of `Instant`.
     ///
     /// # Examples
     ///
     /// ```
     /// use std::time::UNIX_EPOCH;
-    /// use minstant::{Instant, Anchor};
+    ///
+    /// use fastant::Anchor;
+    /// use fastant::Instant;
     ///
     /// let anchor = Anchor::new();
     /// let instant = Instant::now();
@@ -214,7 +221,7 @@ impl Sub<Instant> for Instant {
     ///
     /// # Panics
     ///
-    /// Previously we panicked if `other` was later than `self`. Currently this method saturates
+    /// Previously we panicked if `other` was later than `self`. Currently, this method saturates
     /// to follow the behavior of the standard library. Future versions may reintroduce the panic
     /// in some circumstances.
     fn sub(self, other: Instant) -> Duration {
@@ -230,7 +237,7 @@ impl std::fmt::Debug for Instant {
 
 /// An anchor which can be used to convert internal clocking counter into system timestamp.
 ///
-/// *[See also the `Instant::as_unix_nanos()`](crate::Instant::as_unix_nanos).*
+/// **[See also the `Instant::as_unix_nanos()`](Instant::as_unix_nanos).**
 #[derive(Copy, Clone)]
 pub struct Anchor {
     unix_time_ns: u64,
@@ -260,10 +267,13 @@ impl Anchor {
 #[cfg(all(feature = "atomic", target_has_atomic = "64"))]
 #[cfg_attr(docsrs, doc(cfg(all(feature = "atomic", target_has_atomic = "64"))))]
 mod atomic {
-    use super::Instant;
-    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::Ordering;
+
     #[cfg(doc)]
     use Ordering::*;
+
+    use super::Instant;
 
     /// Atomic variant of [`Instant`].
     #[derive(Debug)]
@@ -320,8 +330,8 @@ mod atomic {
 
         /// Loads a value from the [`Atomic`].
         ///
-        /// `load` takes an [`Ordering`] argument which describes the memory ordering of this operation.
-        /// Possible values are [`SeqCst`], [`Acquire`] and [`Relaxed`].
+        /// `load` takes an [`Ordering`] argument which describes the memory ordering of this
+        /// operation. Possible values are [`SeqCst`], [`Acquire`] and [`Relaxed`].
         ///
         /// # Panics
         ///
@@ -339,8 +349,8 @@ mod atomic {
 
         /// Stores a value into the [`Atomic`].
         ///
-        /// `store` takes an [`Ordering`] argument which describes the memory ordering of this operation.
-        ///  Possible values are [`SeqCst`], [`Release`] and [`Relaxed`].
+        /// `store` takes an [`Ordering`] argument which describes the memory ordering of this
+        /// operation.  Possible values are [`SeqCst`], [`Release`] and [`Relaxed`].
         ///
         /// # Panics
         ///

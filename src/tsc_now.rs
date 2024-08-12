@@ -2,8 +2,9 @@
 
 //! This module will be compiled when it's either linux_x86 or linux_x86_64.
 
+use std::cell::UnsafeCell;
+use std::fs::read_to_string;
 use std::time::Instant;
-use std::{cell::UnsafeCell, fs::read_to_string};
 
 static TSC_STATE: TSCState = TSCState {
     is_tsc_available: UnsafeCell::new(false),

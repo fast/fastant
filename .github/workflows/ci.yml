@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,37 +13,38 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        features: ["atomic", "atomic,fallback-coarse"]
-        rust: [stable]
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
+        features: [ "atomic", "atomic,fallback-coarse" ]
+        rust: [ stable ]
     env:
       RUST_BACKTRACE: 1
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up toolchains
-      uses: actions-rs/toolchain@v1
-      with:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Set up toolchains
+        uses: dtolnay/rust-toolchain@master
+        with:
           toolchain: ${{ matrix.rust }}
-          override: true
           components: rustfmt, clippy
-    - name: Check format
-      run: cargo fmt --all -- --check
-    - name: Build
-      run: cargo build --workspace --all-targets --features ${{ matrix.features }}
-    - name: Clippy
-      run: cargo clippy --workspace --all-targets --features ${{ matrix.features }} -- -D warnings
-    - name: Run tests
-      run: cargo test --workspace --all-targets --features ${{ matrix.features }} -- --nocapture
-    - name: Run benches
-      run: cargo bench --workspace --all-targets --features ${{ matrix.features }}
+      - name: Check format
+        run: cargo fmt --all -- --check
+      - name: Build
+        run: cargo build --workspace --all-targets --features ${{ matrix.features }}
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --features ${{ matrix.features }} -- -D warnings
+      - name: Run tests
+        run: cargo test --workspace --all-targets --features ${{ matrix.features }} -- --nocapture
+      - name: Run benches
+        run: cargo bench --workspace --all-targets --features ${{ matrix.features }}
 
   build-wasm:
     runs-on: ubuntu-latest
     env:
       RUST_BACKTRACE: 1
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up toolchains
-      run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-    - run: wasm-pack test --node
+      - uses: actions/checkout@v4
+      - name: Set up toolchains
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack test --node
