@@ -1,7 +1,6 @@
 [package]
 name = "fastant"
 version = "0.1.9"
-authors = ["FastLabs Developers"]
 edition = "2021"
 license = "MIT"
 description = "A drop-in replacement for `std::time::Instant` that measures time with high performance and high accuracy powered by Time Stamp Counter (TSC)."
