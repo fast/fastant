@@ -99,23 +99,21 @@ fn is_tsc_stable() -> bool {
 fn clock_source_has_tsc() -> bool {
     #[cfg(target_os = "linux")]
     {
-        let clock_sources = [
-            "/sys/devices/system/clocksource/clocksource0/current_clocksource",
-            "/sys/devices/system/clocksource/clocksource0/available_clocksource",
-        ];
+        const CURRENT_CLOCKSOURCE: &str =
+            "/sys/devices/system/clocksource/clocksource0/current_clocksource";
+        const AVAILABLE_CLOCKSOURCE: &str =
+            "/sys/devices/system/clocksource/clocksource0/available_clocksource";
 
-        for path in clock_sources {
-            match read_to_string(path) {
-                Ok(content) => {
-                    if content.contains("tsc") {
-                        return true;
-                    }
-                }
-                Err(e) if e.kind() == ErrorKind::NotFound => continue,
-                Err(_) => return false,
+        match read_to_string(CURRENT_CLOCKSOURCE) {
+            Ok(content) => content.contains("tsc"),
+            Err(e) if e.kind() == ErrorKind::NotFound => {
+                // we only check `available_clocksource` iff `current_clocksource` not exists.
+                read_to_string(AVAILABLE_CLOCKSOURCE)
+                    .map(|s| s.contains("tsc"))
+                    .unwrap_or(false)
             }
+            Err(_) => false,
         }
-        false
     }
 
     #[cfg(not(target_os = "linux"))]
