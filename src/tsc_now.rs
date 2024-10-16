@@ -4,6 +4,7 @@
 
 use std::cell::UnsafeCell;
 use std::fs::read_to_string;
+use std::io::ErrorKind;
 use std::time::Instant;
 
 static TSC_STATE: TSCState = TSCState {
@@ -92,10 +93,49 @@ impl TSCLevel {
 /// rely on the result to say tsc is stable so that no need to
 /// sync TSCs by ourselves.
 fn is_tsc_stable() -> bool {
-    let clock_source =
-        read_to_string("/sys/devices/system/clocksource/clocksource0/available_clocksource");
+    has_invariant_tsc() || clock_source_has_tsc()
+}
 
-    clock_source.map(|s| s.contains("tsc")).unwrap_or(false)
+fn clock_source_has_tsc() -> bool {
+    #[cfg(target_os = "linux")]
+    {
+        const CURRENT_CLOCKSOURCE: &str =
+            "/sys/devices/system/clocksource/clocksource0/current_clocksource";
+        const AVAILABLE_CLOCKSOURCE: &str =
+            "/sys/devices/system/clocksource/clocksource0/available_clocksource";
+
+        match read_to_string(CURRENT_CLOCKSOURCE) {
+            Ok(content) => content.contains("tsc"),
+            Err(e) if e.kind() == ErrorKind::NotFound => {
+                // we only check `available_clocksource` iff `current_clocksource` not exists.
+                read_to_string(AVAILABLE_CLOCKSOURCE)
+                    .map(|s| s.contains("tsc"))
+                    .unwrap_or(false)
+            }
+            Err(_) => false,
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    false
+}
+
+/// Invariant TSC could make sure TSC got synced among multi CPUs.
+/// They will be reset at same time, and run in same frequency.
+/// But in some VM, the max Extended Function in CPUID is < 0x80000007,
+/// we should enable TSC if the system clock source is TSC.
+#[inline]
+fn has_invariant_tsc() -> bool {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    unsafe {
+        use core::arch::x86_64::__cpuid;
+        let cpuid_invariant_tsc_bts = 1 << 8;
+        __cpuid(0x80000000).eax >= 0x80000007
+            && __cpuid(0x80000007).edx & cpuid_invariant_tsc_bts != 0
+    }
+
+    #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+    false
 }
 
 /// Returns (1) cycles per second and (2) cycles from anchor.
