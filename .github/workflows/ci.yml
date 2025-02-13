@@ -55,6 +55,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       RUST_BACKTRACE: 1
+      RUSTFLAGS: --cfg getrandom_backend="wasm_js"
     steps:
       - uses: actions/checkout@v4
       - name: Set up toolchains
