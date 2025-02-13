@@ -10,14 +10,30 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  check:
+    runs-on: ubuntu-24.04
+    env:
+      RUST_BACKTRACE: 1
+    steps:
+        - uses: actions/checkout@v4
+        - uses: Swatinem/rust-cache@v2
+        - name: Set up toolchains
+          uses: dtolnay/rust-toolchain@master
+          with:
+            toolchain: nightly
+            components: rustfmt, clippy
+        - name: Check format
+          run: cargo +nightly fmt --all -- --check
+        - name: Clippy
+          run: cargo +nightly clippy --workspace --all-targets --all-features -- -D warnings
+
   build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-latest, ubuntu-latest, windows-latest ]
+        os: [ ubuntu-24.04, macos-14, windows-2022 ]
         features: [ "atomic", "atomic,fallback-coarse" ]
-        rust: [ stable ]
     env:
       RUST_BACKTRACE: 1
     steps:
@@ -26,21 +42,17 @@ jobs:
       - name: Set up toolchains
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
           components: rustfmt, clippy
-      - name: Check format
-        run: cargo fmt --all -- --check
       - name: Build
         run: cargo build --workspace --all-targets --features ${{ matrix.features }}
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --features ${{ matrix.features }} -- -D warnings
       - name: Run tests
         run: cargo test --workspace --all-targets --features ${{ matrix.features }} -- --nocapture
       - name: Run benches
         run: cargo bench --workspace --all-targets --features ${{ matrix.features }}
 
   build-wasm:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       RUST_BACKTRACE: 1
     steps:
