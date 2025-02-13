@@ -143,11 +143,11 @@ mod tests {
 
     #[test]
     fn test_duration() {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         for _ in 0..10 {
             let instant = Instant::now();
             let std_instant = StdInstant::now();
-            std::thread::sleep(Duration::from_millis(rng.gen_range(100..500)));
+            std::thread::sleep(Duration::from_millis(rng.random_range(100..500)));
             let check = move || {
                 let duration_ns_fastant = instant.elapsed();
                 let duration_ns_std = std_instant.elapsed();
