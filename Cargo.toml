@@ -33,6 +33,9 @@ quanta = { version = "0.12.5" }
 rand = { version = "0.9.0" }
 wasm-bindgen-test = { version = "0.3.50" }
 
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
 [[bench]]
 name = "criterion"
 harness = false
