@@ -36,12 +36,6 @@ impl Instant {
     /// Returns the amount of time elapsed from another instant to this one,
     /// or zero duration if that instant is later than this one.
     ///
-    /// # Panics
-    ///
-    /// Previously we panicked if `earlier` was later than `self`. Currently, this method saturates
-    /// to follow the behavior of the standard library. Future versions may reintroduce the panic
-    /// in some circumstances.
-    ///
     /// # Examples
     ///
     /// ```
@@ -108,12 +102,6 @@ impl Instant {
     }
 
     /// Returns the amount of time elapsed since this instant was created.
-    ///
-    /// # Panics
-    ///
-    /// This function may panic if the current time is earlier than this
-    /// instant, which is something that can happen if an `Instant` is
-    /// produced synthetically.
     ///
     /// # Examples
     ///
@@ -218,12 +206,6 @@ impl Sub<Instant> for Instant {
 
     /// Returns the amount of time elapsed from another instant to this one,
     /// or zero duration if that instant is later than this one.
-    ///
-    /// # Panics
-    ///
-    /// Previously we panicked if `other` was later than `self`. Currently, this method saturates
-    /// to follow the behavior of the standard library. Future versions may reintroduce the panic
-    /// in some circumstances.
     fn sub(self, other: Instant) -> Duration {
         self.duration_since(other)
     }
@@ -269,9 +251,6 @@ impl Anchor {
 mod atomic {
     use std::sync::atomic::AtomicU64;
     use std::sync::atomic::Ordering;
-
-    #[cfg(doc)]
-    use Ordering::*;
 
     use super::Instant;
 

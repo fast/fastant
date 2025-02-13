@@ -21,7 +21,7 @@ struct TSCState {
 
 unsafe impl Sync for TSCState {}
 
-#[ctor::ctor]
+#[small_ctor::ctor]
 unsafe fn init() {
     let tsc_level = TSCLevel::get();
     let is_tsc_available = match &tsc_level {
