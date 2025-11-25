@@ -126,9 +126,13 @@ fn clock_source_has_tsc() -> bool {
 /// we should enable TSC if the system clock source is TSC.
 #[inline]
 fn has_invariant_tsc() -> bool {
+    #[cfg(target_arch = "x86")]
+    use core::arch::x86::__cpuid;
+    #[cfg(target_arch = "x86_64")]
+    use core::arch::x86_64::__cpuid;
+
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
     unsafe {
-        use core::arch::x86_64::__cpuid;
         let cpuid_invariant_tsc_bts = 1 << 8;
         __cpuid(0x80000000).eax >= 0x80000007
             && __cpuid(0x80000007).edx & cpuid_invariant_tsc_bts != 0
