@@ -132,7 +132,7 @@ fn has_invariant_tsc() -> bool {
     use core::arch::x86_64::__cpuid;
 
     #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-    unsafe {
+    {
         let cpuid_invariant_tsc_bts = 1 << 8;
         __cpuid(0x80000000).eax >= 0x80000007
             && __cpuid(0x80000007).edx & cpuid_invariant_tsc_bts != 0
@@ -163,7 +163,7 @@ fn _cycles_per_sec() -> (u64, Instant, u64) {
     let mut last_tsc;
     let mut old_cycles = 0.0;
 
-    loop {
+    'outer: loop {
         let (t1, tsc1) = monotonic_with_tsc();
         loop {
             let (t2, tsc2) = monotonic_with_tsc();
@@ -171,7 +171,14 @@ fn _cycles_per_sec() -> (u64, Instant, u64) {
             last_tsc = tsc2;
             let elapsed_nanos = (t2 - t1).as_nanos();
             if elapsed_nanos > 10_000_000 {
-                cycles_per_sec = (tsc2 - tsc1) as f64 * 1_000_000_000.0 / elapsed_nanos as f64;
+                // Even with fence added in monotonic_with_tsc(), tsc2 < tsc1 is still possible
+                // if the thread migrates to a different CPU core between samples
+                // (cores may have slightly different TSC offsets). checked_sub
+                // prevents overflow; we retry from the outer loop with fresh tsc1.
+                let Some(delta) = tsc2.checked_sub(tsc1) else {
+                    continue 'outer;
+                };
+                cycles_per_sec = delta as f64 * 1_000_000_000.0 / elapsed_nanos as f64;
                 break;
             }
         }
@@ -189,7 +196,23 @@ fn _cycles_per_sec() -> (u64, Instant, u64) {
 /// get interrupted in half way may happen, they aren't guaranteed
 /// to represent the same instant.
 fn monotonic_with_tsc() -> (Instant, u64) {
-    (Instant::now(), tsc())
+    let t = Instant::now();
+    // RDTSC is not serializing; LFENCE ensures Instant::now() completes first.
+    #[cfg(target_feature = "sse2")]
+    {
+        #[cfg(target_arch = "x86")]
+        use std::arch::x86::_mm_lfence;
+        #[cfg(target_arch = "x86_64")]
+        use std::arch::x86_64::_mm_lfence;
+        unsafe { _mm_lfence() };
+    }
+    #[cfg(not(target_feature = "sse2"))]
+    {
+        use std::sync::atomic::compiler_fence;
+        use std::sync::atomic::Ordering;
+        compiler_fence(Ordering::SeqCst);
+    }
+    (t, tsc())
 }
 
 #[inline]
