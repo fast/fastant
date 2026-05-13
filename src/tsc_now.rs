@@ -196,27 +196,23 @@ fn _cycles_per_sec() -> (u64, Instant, u64) {
 /// get interrupted in half way may happen, they aren't guaranteed
 /// to represent the same instant.
 fn monotonic_with_tsc() -> (Instant, u64) {
+    let t = Instant::now();
     // RDTSC is not serializing; LFENCE ensures Instant::now() completes first.
-    #[cfg(any(target_arch = "x86_64", target_feature = "sse2"))]
+    #[cfg(target_feature = "sse2")]
     {
         #[cfg(target_arch = "x86")]
-        use core::arch::x86::_mm_lfence;
+        use std::arch::x86::_mm_lfence;
         #[cfg(target_arch = "x86_64")]
-        use core::arch::x86_64::_mm_lfence;
-        let t = Instant::now();
-        unsafe {
-            _mm_lfence();
-        }
-        (t, tsc())
+        use std::arch::x86_64::_mm_lfence;
+        unsafe { _mm_lfence() };
     }
-    #[cfg(all(target_arch = "x86", not(target_feature = "sse2")))]
+    #[cfg(not(target_feature = "sse2"))]
     {
         use std::sync::atomic::compiler_fence;
         use std::sync::atomic::Ordering;
-        let t = Instant::now();
         compiler_fence(Ordering::SeqCst);
-        (t, tsc())
     }
+    (t, tsc())
 }
 
 #[inline]
