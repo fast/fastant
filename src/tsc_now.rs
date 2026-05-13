@@ -2,10 +2,6 @@
 
 //! This module will be compiled when it's either linux_x86 or linux_x86_64.
 
-#[cfg(all(target_arch = "x86", not(target_feature = "sse2")))]
-use core::sync::atomic::compiler_fence;
-#[cfg(all(target_arch = "x86", not(target_feature = "sse2")))]
-use core::sync::atomic::Ordering;
 use std::cell::UnsafeCell;
 use std::fs::read_to_string;
 use std::io::ErrorKind;
@@ -216,6 +212,8 @@ fn monotonic_with_tsc() -> (Instant, u64) {
     }
     #[cfg(all(target_arch = "x86", not(target_feature = "sse2")))]
     {
+        use std::sync::atomic::compiler_fence;
+        use std::sync::atomic::Ordering;
         let t = Instant::now();
         compiler_fence(Ordering::SeqCst);
         (t, tsc())
