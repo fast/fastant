@@ -32,7 +32,9 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 mod instant;
-#[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
+// Do not bring in tsc_now, which includes a ctor init function that does not work
+// under miri
+#[cfg(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
 mod tsc_now;
 
 pub use instant::Anchor;
@@ -47,11 +49,11 @@ pub use instant::Instant;
 /// The result is always the same during the lifetime of the application process.
 #[inline]
 pub fn is_tsc_available() -> bool {
-    #[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
     {
         tsc_now::is_tsc_available()
     }
-    #[cfg(not(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64"))))]
+    #[cfg(not(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64"))))]
     {
         false
     }
@@ -59,7 +61,7 @@ pub fn is_tsc_available() -> bool {
 
 #[inline]
 pub(crate) fn current_cycle() -> u64 {
-    #[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
     {
         if tsc_now::is_tsc_available() {
             tsc_now::current_cycle()
@@ -67,7 +69,7 @@ pub(crate) fn current_cycle() -> u64 {
             current_cycle_fallback()
         }
     }
-    #[cfg(not(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64"))))]
+    #[cfg(not(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64"))))]
     {
         current_cycle_fallback()
     }
@@ -89,11 +91,11 @@ pub(crate) fn current_cycle_fallback() -> u64 {
 
 #[inline]
 pub(crate) fn nanos_per_cycle() -> f64 {
-    #[cfg(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
+    #[cfg(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64")))]
     {
         tsc_now::nanos_per_cycle()
     }
-    #[cfg(not(all(target_os = "linux", any(target_arch = "x86", target_arch = "x86_64"))))]
+    #[cfg(not(all(not(miri), target_os = "linux", any(target_arch = "x86", target_arch = "x86_64"))))]
     {
         1.0
     }
