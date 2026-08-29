@@ -5,7 +5,7 @@
 use std::cell::UnsafeCell;
 use std::fs::read_to_string;
 use std::io::ErrorKind;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 static TSC_STATE: TSCState = TSCState {
     is_tsc_available: UnsafeCell::new(false),
@@ -71,7 +71,9 @@ impl TSCLevel {
         }
 
         let anchor = Instant::now();
-        let (cps, cfa) = cycles_per_sec(anchor);
+        let Some((cps, cfa)) = cycles_per_sec(anchor) else {
+            return TSCLevel::Unstable;
+        };
         TSCLevel::Stable {
             cycles_per_second: cps,
             cycles_from_anchor: cfa,
@@ -147,13 +149,33 @@ fn has_invariant_tsc() -> bool {
 /// can be used to
 ///   1. readjust TSC to begin from zero
 ///   2. sync TSCs between all CPUs
-fn cycles_per_sec(anchor: Instant) -> (u64, u64) {
+fn cycles_per_sec(anchor: Instant) -> Option<(u64, u64)> {
     let (cps, last_monotonic, last_tsc) = _cycles_per_sec();
-    let nanos_from_anchor = (last_monotonic - anchor).as_nanos();
-    let cycles_flied = cps as f64 * nanos_from_anchor as f64 / 1_000_000_000.0;
-    let cycles_from_anchor = last_tsc - cycles_flied.ceil() as u64;
+    let elapsed = last_monotonic.checked_duration_since(anchor)?;
+    let cycles_from_anchor = project_cycles_from_anchor(cps, elapsed, last_tsc)?;
 
-    (cps, cycles_from_anchor)
+    Some((cps, cycles_from_anchor))
+}
+
+/// Projects a sampled TSC back to the monotonic anchor.
+///
+/// A VM or CPU migration can produce a TSC value smaller than the projected
+/// elapsed cycles even when the platform reported an invariant TSC. Treat such
+/// a sample as an unsuccessful calibration so initialization can use the
+/// fallback clock instead of panicking in the static constructor.
+fn project_cycles_from_anchor(
+    cycles_per_second: u64,
+    elapsed: Duration,
+    last_tsc: u64,
+) -> Option<u64> {
+    const NANOS_PER_SECOND: u128 = 1_000_000_000;
+
+    let elapsed_cycles = u128::from(cycles_per_second)
+        .checked_mul(elapsed.as_nanos())?
+        .checked_add(NANOS_PER_SECOND - 1)?
+        / NANOS_PER_SECOND;
+    let elapsed_cycles = u64::try_from(elapsed_cycles).ok()?;
+    last_tsc.checked_sub(elapsed_cycles)
 }
 
 /// Returns (1) cycles per second, (2) last monotonic time and (3) associated tsc.
@@ -223,4 +245,25 @@ fn tsc() -> u64 {
     use core::arch::x86_64::_rdtsc;
 
     unsafe { _rdtsc() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn anchor_projection_rounds_partial_cycles_up() {
+        assert_eq!(
+            project_cycles_from_anchor(1, Duration::from_nanos(1), 10),
+            Some(9)
+        );
+    }
+
+    #[test]
+    fn anchor_projection_rejects_an_inconsistent_tsc_sample() {
+        assert_eq!(
+            project_cycles_from_anchor(1_000_000_000, Duration::from_nanos(11), 10),
+            None
+        );
+    }
 }
